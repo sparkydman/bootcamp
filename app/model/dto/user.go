@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"bootcamp-api/app/model/dao"
+
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
@@ -20,6 +22,11 @@ type CreateUserRequest struct {
 type LoginUserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+type LoginUserResponse struct {
+	dao.User
+	AccessToken string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
 func (c CreateUserRequest) Vaildate() error {

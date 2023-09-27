@@ -4,15 +4,18 @@ import (
 	"bootcamp-api/app/model/dao"
 	"bootcamp-api/app/model/dto"
 	"bootcamp-api/app/repository"
+	"bootcamp-api/config"
 	"bootcamp-api/utils"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -92,8 +95,56 @@ func (s userService) LoginUser(c *gin.Context) {
 		utils.PanicException(utils.CredentialsErrorCode)
 	}
 
-	user.Password = ""
-	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, user))
+	accessTokenClaims := config.TokenClaims[dao.User]{
+		dao.User{
+			Email: user.Email,
+			Name: user.Name,
+			Role: user.Role,
+		},
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer: os.Getenv("TOKEN_ISSUER"),
+			Subject: os.Getenv("TOKEN_SUBJECT"),
+		},
+	}
+
+	accessToken, err := accessTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+	if err != nil {
+		code := utils.UnAuthorizedErrorCode
+		code.SetMessage(err.Error())
+		utils.PanicException(code)
+	}
+
+	age := time.Now().Add(30 * 24 * time.Hour);
+	refreshTokenClaims := config.TokenClaims[dao.User]{
+		dao.User{
+			Email: user.Email,
+			Name: user.Name,
+			Role: user.Role,
+		},
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(age),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer: os.Getenv("TOKEN_ISSUER"),
+			Subject: os.Getenv("TOKEN_SUBJECT"),
+		},
+	}
+
+	refreshToken, err := refreshTokenClaims.GenerateToken([]byte(os.Getenv("REFRESH_TOKEN_KEY")))
+	if err != nil {
+		code := utils.UnAuthorizedErrorCode
+		code.SetMessage(err.Error())
+		utils.PanicException(code)
+	}
+
+	loginUser := dto.LoginUserResponse{User: user, AccessToken: accessToken, RefreshToken: refreshToken}
+
+	loginUser.Password = ""
+	c.SetCookie("refreshToken", refreshToken, 60 * 60 * 24 * 30, "/", "", false, false)
+	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, loginUser))
 }
 
 func (s userService) GetUserById(c *gin.Context) {
@@ -118,7 +169,7 @@ func (s userService) GetUserById(c *gin.Context) {
 
 func (s userService) GetUsers(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
-
+	fmt.Println("url from middleware", c.MustGet("RequestUrl").(string))
 	filter := bson.D{}
 	querySort := c.Query("sort")
 	querySelect := c.Query("select")
