@@ -51,7 +51,7 @@ func SetResponse[T any](isSuccessful bool, status MessageCode, data T) dto.Respo
 	}
 }
 
-func UnAuthorizedResponse(c *gin.Context){
+func UnAuthorizedResponse(c *gin.Context) {
 	c.JSON(http.StatusUnauthorized, SetResponse(false, UnAuthorizedErrorCode, NULL()))
 	c.Abort()
 }

@@ -8,8 +8,8 @@ import (
 )
 
 type UserRequest struct {
-	Name            string `json:"name"`
-	Role            string `json:"role"`
+	Name string `json:"name"`
+	Role string `json:"role"`
 }
 
 type CreateUserRequest struct {
@@ -25,7 +25,7 @@ type LoginUserRequest struct {
 }
 type LoginUserResponse struct {
 	dao.User
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 }
 

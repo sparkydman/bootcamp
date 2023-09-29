@@ -2,36 +2,26 @@ package middleware
 
 import (
 	"bootcamp-api/app/model/dao"
-	"bootcamp-api/config"
 	"bootcamp-api/utils"
-	"os"
-	"strings"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func AuthenticateUser() gin.HandlerFunc{
-	return func(c *gin.Context){
-		headers := c.Request.Header
-		authHeders := headers["Authorization"]
-		if len(authHeders) != 0 {
-			token := authHeders[0]
-			if token != "" || strings.HasPrefix(token, "Bearer ") {
-				token, found := strings.CutPrefix(token, "Bearer ")
-				if found {
-					user, err := config.VerifyToken(token, []byte(os.Getenv("ACCESS_TOKEN_KEY")), dao.User{})
-					if err == nil {
-						c.Set("LoggedInUser", user)
-						c.Next()
-					}else{
-						utils.UnAuthorizedResponse(c)
-					}
-				}	
-			}else{
-				utils.UnAuthorizedResponse(c)
+func AuthorizeUser(roles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user := c.MustGet("LoggedInUser").(dao.User)
+		isAllowed := false
+		for _, r := range roles {
+			if user.Role == r {
+				isAllowed = true
 			}
-		}else{
-			utils.UnAuthorizedResponse(c)
+		}
+		if isAllowed {
+			c.Next()
+		} else {
+			c.JSON(http.StatusUnauthorized, utils.SetResponse(false, utils.ForbiddenErrorCode, utils.NULL()))
+			c.Abort()
 		}
 	}
 }

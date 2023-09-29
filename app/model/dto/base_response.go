@@ -1,8 +1,8 @@
 package dto
 
 type Response[T any] struct {
-	IsSuccessful bool   `json:"IsSuccessful"`
-	Message      string `json:"Message"`
-	Status       string `json:"Status"`
-	Data         T      `json:"Data"`
+	IsSuccessful bool   `json:"is_successful"`
+	Message      string `json:"message"`
+	Status       string `json:"status"`
+	Data         T      `json:"data"`
 }
