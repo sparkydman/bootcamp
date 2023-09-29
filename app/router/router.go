@@ -17,10 +17,10 @@ func Init(ctrl controller.IUserController) *gin.Engine {
 		user := api.Group("/users")
 		user.POST("/create", ctrl.CreateUser)
 		user.POST("/login", ctrl.LoginUser)
-		user.GET("/", middleware.ExampleMiddleware(), ctrl.GetUsers)
+		user.GET("/", ctrl.GetUsers)
 		user.GET("/:id", ctrl.GetUserById)
-		user.PUT("/:userid", ctrl.UpdateUser)
-		user.DELETE("/:userid", ctrl.DeleteUser)
+		user.PUT("/:userid", middleware.AuthenticateUser(), ctrl.UpdateUser)
+		user.DELETE("/:userid", middleware.AuthenticateUser(), ctrl.DeleteUser)
 	}
 
 	return router

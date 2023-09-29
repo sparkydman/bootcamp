@@ -2,6 +2,9 @@ package utils
 
 import (
 	"bootcamp-api/app/model/dto"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type MessageCode int
@@ -46,4 +49,9 @@ func SetResponse[T any](isSuccessful bool, status MessageCode, data T) dto.Respo
 		Status:       status.GetStatus(),
 		Data:         data,
 	}
+}
+
+func UnAuthorizedResponse(c *gin.Context){
+	c.JSON(http.StatusUnauthorized, SetResponse(false, UnAuthorizedErrorCode, NULL()))
+	c.Abort()
 }

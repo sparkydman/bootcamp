@@ -143,7 +143,7 @@ func (s userService) LoginUser(c *gin.Context) {
 	loginUser := dto.LoginUserResponse{User: user, AccessToken: accessToken, RefreshToken: refreshToken}
 
 	loginUser.Password = ""
-	c.SetCookie("refreshToken", refreshToken, 60 * 60 * 24 * 30, "/", "", false, false)
+	c.SetCookie("refresh_token", refreshToken, 60 * 60 * 24 * 30, "/", "", false, false)
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, loginUser))
 }
 
@@ -169,7 +169,7 @@ func (s userService) GetUserById(c *gin.Context) {
 
 func (s userService) GetUsers(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
-	fmt.Println("url from middleware", c.MustGet("RequestUrl").(string))
+	// fmt.Println("url from middleware", c.MustGet("RequestUrl").(string))
 	filter := bson.D{}
 	querySort := c.Query("sort")
 	querySelect := c.Query("select")
