@@ -12,6 +12,10 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
+func init() {
+	config.InitLog()
+}
+
 func main() {
 	db := config.Db{
 		Uri: os.Getenv("MONGO_URI"),
