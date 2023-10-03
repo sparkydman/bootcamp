@@ -7,8 +7,6 @@ import (
 	"bootcamp-api/config"
 	"bootcamp-api/utils"
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -16,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	logger "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,6 +28,8 @@ type IUserService interface {
 	GetUsers(c *gin.Context)
 	UpdateUser(c *gin.Context)
 	DeleteUser(c *gin.Context)
+	GetLoggedInUser(c *gin.Context)
+	GetToken(c *gin.Context)
 }
 
 type userService struct {
@@ -55,6 +56,7 @@ func (s userService) CreateUser(c *gin.Context) {
 
 	_, err := s.repo.GetUserByFieldName(context.TODO(), bson.D{{"email", request.Email}})
 	if err == nil {
+		logger.Error("User already exists")
 		code.SetMessage("user already exists")
 		utils.PanicException(code)
 	}
@@ -88,6 +90,7 @@ func (s userService) LoginUser(c *gin.Context) {
 
 	user, err := s.repo.GetUserByFieldName(context.TODO(), bson.D{{"email", request.Email}})
 	if err != nil {
+		logger.Error("failed to get user by email: %s, error: %v", request.Email, err)
 		utils.PanicException(utils.CredentialsErrorCode)
 	}
 
@@ -95,15 +98,10 @@ func (s userService) LoginUser(c *gin.Context) {
 		utils.PanicException(utils.CredentialsErrorCode)
 	}
 
+	payload := user
+	payload.Password = ""
 	accessTokenClaims := config.TokenClaims[dao.User]{
-		dao.User{
-			Email: user.Email,
-			Name:  user.Name,
-			Role:  user.Role,
-			Base: dao.Base{
-				ID: user.ID,
-			},
-		},
+		payload,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -115,21 +113,15 @@ func (s userService) LoginUser(c *gin.Context) {
 
 	accessToken, err := accessTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
 	if err != nil {
+		logger.Error("failed to generate access token", err)
 		code := utils.UnAuthorizedErrorCode
 		code.SetMessage(err.Error())
 		utils.PanicException(code)
 	}
 
 	age := time.Now().Add(30 * 24 * time.Hour)
-	refreshTokenClaims := config.TokenClaims[dao.User]{
-		dao.User{
-			Email: user.Email,
-			Name:  user.Name,
-			Role:  user.Role,
-			Base: dao.Base{
-				ID: user.ID,
-			},
-		},
+	refreshTokenClaims := config.TokenClaims[primitive.ObjectID]{
+		user.ID,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(age),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -141,6 +133,7 @@ func (s userService) LoginUser(c *gin.Context) {
 
 	refreshToken, err := refreshTokenClaims.GenerateToken([]byte(os.Getenv("REFRESH_TOKEN_KEY")))
 	if err != nil {
+		logger.Error("failed to generate refresh token", err)
 		code := utils.UnAuthorizedErrorCode
 		code.SetMessage(err.Error())
 		utils.PanicException(code)
@@ -156,8 +149,10 @@ func (s userService) LoginUser(c *gin.Context) {
 func (s userService) GetUserById(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 
-	id, err := primitive.ObjectIDFromHex(c.Params.ByName("id"))
+	param := c.Params.ByName("id")
+	id, err := primitive.ObjectIDFromHex(param)
 	if err != nil {
+		logger.Errorf("failed to create object ID: %s, Error: %v", param, err)
 		code := utils.BadRequestErrorCode
 		code.SetMessage("Invalid user id")
 		utils.PanicException(code)
@@ -166,6 +161,7 @@ func (s userService) GetUserById(c *gin.Context) {
 	filter := bson.M{"_id": id}
 	user, err := s.repo.GetUserById(context.TODO(), filter)
 	if err != nil {
+		logger.Errorf("failed to get user by id: %v, error: %v", id, err)
 		utils.PanicException(utils.ServerErrorCode)
 	}
 
@@ -196,7 +192,7 @@ func (s userService) GetUsers(c *gin.Context) {
 
 	users, err := s.repo.GetUsers(context.TODO(), filter, opts...)
 	if err != nil {
-		fmt.Errorf("error while getting users %v\n", err)
+		logger.Errorf("error while getting users %v", err)
 		utils.PanicException(utils.ServerErrorCode)
 	}
 
@@ -210,7 +206,7 @@ func (s userService) UpdateUser(c *gin.Context) {
 	var user dto.UserRequest
 	code := utils.BadRequestErrorCode
 	if err := c.ShouldBindJSON(&user); err != nil {
-		log.Println("failed to bind JSON", err)
+		logger.Error("failed to bind JSON", err)
 		utils.PanicException(code)
 	}
 
@@ -219,20 +215,21 @@ func (s userService) UpdateUser(c *gin.Context) {
 	if user.Role == "admin" {
 		id, err = primitive.ObjectIDFromHex(c.Params.ByName("userid"))
 		if err != nil {
-			log.Println("failed to validate request parameter", err)
+			logger.Error("failed to validate request parameter", err)
 			code.SetMessage("Invalid user id")
 			utils.PanicException(code)
 		}
 	}
 	id = u.ID
 	if _, err := s.repo.GetUserById(context.TODO(), bson.M{"_id": id}); err != nil {
+		logger.Errorf("failed to get user by id: %v, error: %v", id, err)
 		errorCode := utils.NotFoundErrorCode
 		errorCode.SetMessage("user not found")
 		utils.PanicException(errorCode)
 	}
 
 	if err := user.Vaildate(); err != nil {
-		log.Println("failed to validate request body", err)
+		logger.Error("failed to validate request body", err)
 		code.SetMessage(err.Error())
 		utils.PanicException(code)
 	}
@@ -241,7 +238,7 @@ func (s userService) UpdateUser(c *gin.Context) {
 	data := bson.D{{"$set", bson.D{{"name", user.Name}, {"role", user.Role}, {"updated_at", time.Now()}}}}
 
 	if err := s.repo.UpdateUser(context.TODO(), filter, data); err != nil {
-		log.Println("failed to update user", err)
+		logger.Error("failed to update user", err)
 		utils.PanicException(utils.ServerErrorCode)
 	}
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
@@ -252,10 +249,12 @@ func (s userService) DeleteUser(c *gin.Context) {
 	var err error
 
 	user := c.MustGet("LoggedInUser").(dao.User)
+	param := c.Params.ByName("userid")
 	var id primitive.ObjectID
 	if user.Role == "admin" {
-		id, err = primitive.ObjectIDFromHex(c.Params.ByName("userid"))
+		id, err = primitive.ObjectIDFromHex(param)
 		if err != nil {
+			logger.Errorf("failed to validate user id: %s, error: %v", param, err)
 			code := utils.BadRequestErrorCode
 			code.SetMessage("Invalid user ID")
 			utils.PanicException(code)
@@ -264,7 +263,61 @@ func (s userService) DeleteUser(c *gin.Context) {
 	id = user.ID
 
 	if err := s.repo.DeleteUser(context.TODO(), bson.D{{"_id", id}}); err != nil {
+		logger.Errorf("failed to delete user with id: %s, error: %v", param, err)
 		utils.PanicException(utils.ServerErrorCode)
 	}
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
+}
+
+func (s userService) GetLoggedInUser(c *gin.Context){
+	defer utils.ResponseErrorHandler(c)
+	user := c.MustGet("LoggedInUser")
+
+	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, user))
+}
+
+func (s userService) GetToken(c *gin.Context){
+	defer utils.ResponseErrorHandler(c)
+	code := utils.BadRequestErrorCode
+
+	cookies, err := c.Cookie("refresh_token")
+	if err != nil {
+		logger.Errorf("failed to retrieve refresh token from cookies, error: %v", err)
+		code.SetMessage(err.Error())
+		utils.PanicException(code)
+	}
+	decode, err := config.VerifyToken[primitive.ObjectID](cookies, []byte(os.Getenv("REFRESH_TOKEN_KEY")), primitive.ObjectID{})
+	if err != nil {
+		logger.Errorf("failed to decode refresh token, error: %v", err)
+		code.SetMessage(err.Error())
+		utils.PanicException(code)
+	}
+
+	user, err := s.repo.GetUserById(context.TODO(), primitive.M{"_id": decode})
+	if err != nil {
+		logger.Errorf("failed to retrieve user from db, error: %v", err)
+		code = utils.NotFoundErrorCode
+		code.SetMessage("user not found")
+		utils.PanicException(code)
+	}
+
+	newTokenClaims := config.TokenClaims[dao.User]{
+		user,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    os.Getenv("TOKEN_ISSUER"),
+			Subject:   os.Getenv("TOKEN_SUBJECT"),
+		},
+	}
+	newToken, err := newTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+	if err != nil {
+		logger.Errorf("failed to generate new access token, error: %v", err)
+		code = utils.ServerErrorCode
+		code.SetMessage(err.Error())
+		utils.PanicException(code)
+	}
+
+	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, struct{AccessToken  string `json:"access_token,omitempty"`}{AccessToken: newToken}))
 }

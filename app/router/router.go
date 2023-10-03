@@ -18,6 +18,8 @@ func Init(ctrl controller.IUserController) *gin.Engine {
 		user.POST("/create", ctrl.CreateUser)
 		user.POST("/login", ctrl.LoginUser)
 		user.GET("/", ctrl.GetUsers)
+		user.GET("/me", middleware.AuthenticateUser(), ctrl.GetLoggedInUser)
+		user.GET("/token", ctrl.GetToken)
 		user.GET("/:id", ctrl.GetUserById)
 		user.PUT("/:userid", middleware.AuthenticateUser(), ctrl.UpdateUser)
 		user.DELETE("/:userid", middleware.AuthenticateUser(), ctrl.DeleteUser)

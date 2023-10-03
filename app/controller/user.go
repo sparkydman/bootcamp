@@ -13,6 +13,8 @@ type IUserController interface {
 	GetUsers(c *gin.Context)
 	UpdateUser(g *gin.Context)
 	DeleteUser(g *gin.Context)
+	GetLoggedInUser(c *gin.Context)
+	GetToken(c *gin.Context)
 }
 
 type userController struct {
@@ -41,4 +43,10 @@ func (c userController) UpdateUser(g *gin.Context) {
 }
 func (c userController) DeleteUser(g *gin.Context) {
 	c.svc.DeleteUser(g)
+}
+func (c userController) GetLoggedInUser(g *gin.Context){
+	c.svc.GetLoggedInUser(g)
+}
+func (c userController) GetToken(g *gin.Context){
+	c.svc.GetToken(g)
 }
