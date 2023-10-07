@@ -9,23 +9,23 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	logger "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type IBootcampService interface {
 	AddBootcamp(c *gin.Context)
 }
 
-type bootcamp struct {
+type Bootcamp struct {
 	repo repository.IBootcampRepository
 }
 
-func NewBootcampService(repo repository.IBootcampRepository) IBootcampService {
-	return &bootcamp{repo: repo}
+func NewBootcampService(repo repository.IBootcampRepository) *Bootcamp {
+	return &Bootcamp{repo: repo}
 }
 
-func (b bootcamp) AddBootcamp(c *gin.Context){
+func (b Bootcamp) AddBootcamp(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 
 	var request dto.BootcampRequest

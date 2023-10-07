@@ -21,15 +21,15 @@ type IUserRepository interface {
 	DeleteUser(ctx context.Context, filter bson.D) error
 }
 
-type userRepository struct {
-	db config.Db
+type UserRepository struct {
+	db *config.Db
 }
 
-func NewUserRepository(db config.Db) IUserRepository {
-	return &userRepository{db: db}
+func NewUserRepository(db *config.Db) *UserRepository {
+	return &UserRepository{db: db}
 }
 
-func (r userRepository) CreateUser(ctx context.Context, data dao.User) error {
+func (r UserRepository) CreateUser(ctx context.Context, data dao.User) error {
 	data.Base.ID = primitive.NewObjectID()
 	data.Base.CreatedAt = time.Now()
 	_, err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").InsertOne(ctx, data)
@@ -37,21 +37,21 @@ func (r userRepository) CreateUser(ctx context.Context, data dao.User) error {
 	return err
 }
 
-func (r userRepository) GetUserById(ctx context.Context, filter bson.M) (dao.User, error) {
+func (r UserRepository) GetUserById(ctx context.Context, filter bson.M) (dao.User, error) {
 	var user dao.User
 	if err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").FindOne(ctx, filter).Decode(&user); err != nil {
 		return user, err
 	}
 	return user, nil
 }
-func (r userRepository) GetUserByFieldName(ctx context.Context, filter bson.D) (dao.User, error) {
+func (r UserRepository) GetUserByFieldName(ctx context.Context, filter bson.D) (dao.User, error) {
 	var user dao.User
 	if err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").FindOne(ctx, filter).Decode(&user); err != nil {
 		return user, err
 	}
 	return user, nil
 }
-func (r userRepository) GetUsers(ctx context.Context, filter bson.D, opt ...*options.FindOptions) ([]dao.User, error) {
+func (r UserRepository) GetUsers(ctx context.Context, filter bson.D, opt ...*options.FindOptions) ([]dao.User, error) {
 	var users []dao.User
 	cursor, err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").Find(ctx, filter, opt...)
 	if err != nil {
@@ -63,14 +63,14 @@ func (r userRepository) GetUsers(ctx context.Context, filter bson.D, opt ...*opt
 	}
 	return users, nil
 }
-func (r userRepository) UpdateUser(ctx context.Context, filter, updateData bson.D) error {
+func (r UserRepository) UpdateUser(ctx context.Context, filter, updateData bson.D) error {
 	_, err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").UpdateOne(ctx, filter, updateData)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (r userRepository) DeleteUser(ctx context.Context, filter bson.D) error {
+func (r UserRepository) DeleteUser(ctx context.Context, filter bson.D) error {
 	_, err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").DeleteOne(ctx, filter)
 	if err != nil {
 		return err

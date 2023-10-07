@@ -1,13 +1,13 @@
 package router
 
 import (
-	"bootcamp-api/app/controller"
 	"bootcamp-api/app/middleware"
+	"bootcamp-api/dependencies"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Init(ctrl controller.IUserController) *gin.Engine {
+func Init(app *dependencies.Initialize) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
@@ -15,14 +15,14 @@ func Init(ctrl controller.IUserController) *gin.Engine {
 	api := router.Group("/api")
 	{
 		user := api.Group("/users")
-		user.POST("/create", ctrl.CreateUser)
-		user.POST("/login", ctrl.LoginUser)
-		user.GET("/", ctrl.GetUsers)
-		user.GET("/me", middleware.AuthenticateUser(), ctrl.GetLoggedInUser)
-		user.GET("/token", ctrl.GetToken)
-		user.GET("/:id", ctrl.GetUserById)
-		user.PUT("/:userid", middleware.AuthenticateUser(), ctrl.UpdateUser)
-		user.DELETE("/:userid", middleware.AuthenticateUser(), ctrl.DeleteUser)
+		user.POST("/create", app.UserCtrl.CreateUser)
+		user.POST("/login", app.UserCtrl.LoginUser)
+		user.GET("/", app.UserCtrl.GetUsers)
+		user.GET("/me", middleware.AuthenticateUser(), app.UserCtrl.GetLoggedInUser)
+		user.GET("/token", app.UserCtrl.GetToken)
+		user.GET("/:id", app.UserCtrl.GetUserById)
+		user.PUT("/:userid", middleware.AuthenticateUser(), app.UserCtrl.UpdateUser)
+		user.DELETE("/:userid", middleware.AuthenticateUser(), app.UserCtrl.DeleteUser)
 	}
 
 	return router

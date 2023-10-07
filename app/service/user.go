@@ -32,15 +32,15 @@ type IUserService interface {
 	GetToken(c *gin.Context)
 }
 
-type userService struct {
+type UserService struct {
 	repo repository.IUserRepository
 }
 
-func NewUserService(repo repository.IUserRepository) IUserService {
-	return &userService{repo: repo}
+func NewUserService(repo repository.IUserRepository) *UserService {
+	return &UserService{repo: repo}
 }
 
-func (s userService) CreateUser(c *gin.Context) {
+func (s UserService) CreateUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 
 	var request dto.CreateUserRequest
@@ -81,7 +81,7 @@ func (s userService) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
 }
 
-func (s userService) LoginUser(c *gin.Context) {
+func (s UserService) LoginUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 
 	var request dto.LoginUserRequest
@@ -147,7 +147,7 @@ func (s userService) LoginUser(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, loginUser))
 }
 
-func (s userService) GetUserById(c *gin.Context) {
+func (s UserService) GetUserById(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 
 	param := c.Params.ByName("id")
@@ -170,7 +170,7 @@ func (s userService) GetUserById(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, user))
 }
 
-func (s userService) GetUsers(c *gin.Context) {
+func (s UserService) GetUsers(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	// fmt.Println("url from middleware", c.MustGet("RequestUrl").(string))
 	filter := bson.D{}
@@ -200,7 +200,7 @@ func (s userService) GetUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, users))
 }
 
-func (s userService) UpdateUser(c *gin.Context) {
+func (s UserService) UpdateUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	var err error
 
@@ -245,7 +245,7 @@ func (s userService) UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
 }
 
-func (s userService) DeleteUser(c *gin.Context) {
+func (s UserService) DeleteUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	var err error
 
@@ -270,14 +270,14 @@ func (s userService) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
 }
 
-func (s userService) GetLoggedInUser(c *gin.Context) {
+func (s UserService) GetLoggedInUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	user := c.MustGet("LoggedInUser")
 
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, user))
 }
 
-func (s userService) GetToken(c *gin.Context) {
+func (s UserService) GetToken(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	code := utils.BadRequestErrorCode
 

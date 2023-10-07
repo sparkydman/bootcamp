@@ -10,7 +10,14 @@ import (
 
 type Db struct {
 	*mongo.Client
-	Uri string
+}
+
+func NewConnection(uri string) (*Db, error) {
+	c, err := connect(uri)
+	if err != nil {
+		return nil, err
+	}
+	return &Db{c}, nil
 }
 
 func (d *Db) IsConnected() bool {
@@ -21,23 +28,17 @@ func (d *Db) IsConnected() bool {
 	return true
 }
 
-func (d *Db) Connect() error {
-	version := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(d.Uri).SetServerAPIOptions(version)
-
-	client, err := mongo.Connect(context.TODO(), opts)
-	if err != nil {
-		return err
-	}
-
-	d.Client = client
-	return nil
-}
-
 func (d *Db) Disconnect() func() {
 	return func() {
 		if err := d.Client.Disconnect(context.TODO()); err != nil {
 			panic(err)
 		}
 	}
+}
+
+func connect(uri string) (*mongo.Client, error) {
+	version := options.ServerAPI(options.ServerAPIVersion1)
+	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(version)
+
+	return mongo.Connect(context.TODO(), opts)
 }

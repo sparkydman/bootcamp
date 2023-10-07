@@ -10,13 +10,13 @@ type IBootcampController interface {
 	AddBootcamp(c *gin.Context)
 }
 
-type bootcampController struct {
+type BootcampController struct {
 	svc service.IBootcampService
 }
 
-func NewBootcampController(svc service.IBootcampService) IBootcampController {
-	return &bootcampController{svc: svc}
+func NewBootcampController(svc service.IBootcampService) *BootcampController {
+	return &BootcampController{svc: svc}
 }
-func (b bootcampController) AddBootcamp(c *gin.Context){
+func (b BootcampController) AddBootcamp(c *gin.Context) {
 	b.svc.AddBootcamp(c)
 }

@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bootcamp-api/app/controller"
-	"bootcamp-api/app/repository"
 	"bootcamp-api/app/router"
-	"bootcamp-api/app/service"
 	"bootcamp-api/config"
-	"fmt"
+	"bootcamp-api/dependencies"
+	"log"
 	"os"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -17,22 +15,18 @@ func init() {
 }
 
 func main() {
-	db := config.Db{
-		Uri: os.Getenv("MONGO_URI"),
-	}
-	if err := db.Connect(); err != nil {
+	dep, err := dependencies.InitApp(os.Getenv("MONGO_URI"))
+	if err != nil {
 		panic(err)
 	}
-	if db.IsConnected() {
-		fmt.Println("Connection to database established")
+
+	if dep.Db.IsConnected() {
+		log.Println("Connection to database established")
 	}
-	defer db.Disconnect()
 
-	userRepo := repository.NewUserRepository(db)
-	userService := service.NewUserService(userRepo)
-	userController := controller.NewUserController(userService)
+	defer dep.Db.Disconnect()
 
-	app := router.Init(userController)
+	app := router.Init(dep)
 
 	app.Run(":8800")
 }
