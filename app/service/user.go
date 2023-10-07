@@ -44,11 +44,12 @@ func (s userService) CreateUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 
 	var request dto.CreateUserRequest
+	code := utils.BadRequestErrorCode
 	if err := c.ShouldBindJSON(&request); err != nil {
-		utils.PanicException(utils.BadRequestErrorCode)
+		code.SetMessage(err.Error())
+		utils.PanicException(code)
 	}
 
-	code := utils.BadRequestErrorCode
 	if err := request.Vaildate(); err != nil {
 		code.SetMessage(err.Error())
 		utils.PanicException(code)
@@ -57,6 +58,7 @@ func (s userService) CreateUser(c *gin.Context) {
 	_, err := s.repo.GetUserByFieldName(context.TODO(), bson.D{{"email", request.Email}})
 	if err == nil {
 		logger.Error("User already exists")
+		code = utils.ConflictErrorCode
 		code.SetMessage("user already exists")
 		utils.PanicException(code)
 	}
@@ -67,11 +69,10 @@ func (s userService) CreateUser(c *gin.Context) {
 	}
 	request.Password = string(hashedPassword)
 
-	user := dao.User{
-		Name:     request.Name,
-		Email:    request.Email,
-		Role:     request.Role,
-		Password: request.Password,
+	user, err := utils.EmbedStructFlat[dao.User](request)
+	if err != nil {
+		logger.Error("couldn't embed struct", err)
+		utils.PanicException(utils.ServerErrorCode)
 	}
 	if err := s.repo.CreateUser(context.TODO(), user); err != nil {
 		utils.PanicException(utils.ServerErrorCode)

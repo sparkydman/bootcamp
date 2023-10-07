@@ -18,11 +18,12 @@ const (
 	NotFoundErrorCode
 	ServerErrorCode
 	CredentialsErrorCode
+	ConflictErrorCode
 )
 
-var errorMessages = []string{"Successful", "Invalid request data", "Bad request", "User not authorized", "User not allowed to perform this action", "Data not found", "Internal server issue", "Invalid credentials"}
+var errorMessages = []string{"Successful", "Invalid request data", "Bad request", "User not authorized", "User not allowed to perform this action", "Data not found", "Internal server issue", "Invalid credentials", "Data already exists"}
 
-var errorStatus = []string{"SUCCESSFUL", "INVALID_DATA", "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "DATA_NOT_FOUND", "SERVER_ERROR", "INVALID_CREDENTIAL"}
+var errorStatus = []string{"SUCCESSFUL", "INVALID_DATA", "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "DATA_NOT_FOUND", "SERVER_ERROR", "INVALID_CREDENTIAL", "CONFLICT_ERROR"}
 
 func (m MessageCode) GetStatus() string {
 	return errorStatus[m]

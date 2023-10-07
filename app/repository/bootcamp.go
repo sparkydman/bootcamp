@@ -13,6 +13,12 @@ import (
 )
 
 type IBootcampRepository interface {
+	AddBootcamp(ctx context.Context, data dao.Bootcamp) error
+	GetBootcampById(ctx context.Context, filter bson.M) (dao.Bootcamp, error)
+	GetBootcamps(ctx context.Context, filter bson.D, opt ...*options.FindOptions) ([]dao.Bootcamp, error)
+	UpdateBootcamp(ctx context.Context, filter, data bson.D) error
+	DeleteBootcamp(ctx context.Context, filter bson.D) error 
+	GetBootcampByFieldName(ctx context.Context, filter bson.D) (dao.Bootcamp, error)
 }
 
 type bootcampRepository struct {
@@ -33,6 +39,13 @@ func (b bootcampRepository) GetBootcampById(ctx context.Context, filter bson.M) 
 	var bootcamp dao.Bootcamp
 	if err := b.db.Client.Database(os.Getenv("DB_NAME")).Collection("Bootcamps").FindOne(ctx, filter).Decode(&bootcamp); err != nil {
 		return dao.Bootcamp{}, err
+	}
+	return bootcamp, nil
+}
+func (b bootcampRepository) GetBootcampByFieldName(ctx context.Context, filter bson.D) (dao.Bootcamp, error) {
+	var bootcamp dao.Bootcamp
+	if err := b.db.Client.Database(os.Getenv("DB_NAME")).Collection("Bootcamps").FindOne(ctx, filter).Decode(&bootcamp); err != nil {
+		return bootcamp, err
 	}
 	return bootcamp, nil
 }

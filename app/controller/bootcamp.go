@@ -1,8 +1,13 @@
 package controller
 
-import "bootcamp-api/app/service"
+import (
+	"bootcamp-api/app/service"
+
+	"github.com/gin-gonic/gin"
+)
 
 type IBootcampController interface {
+	AddBootcamp(c *gin.Context)
 }
 
 type bootcampController struct {
@@ -11,4 +16,7 @@ type bootcampController struct {
 
 func NewBootcampController(svc service.IBootcampService) IBootcampController {
 	return &bootcampController{svc: svc}
+}
+func (b bootcampController) AddBootcamp(c *gin.Context){
+	b.svc.AddBootcamp(c)
 }

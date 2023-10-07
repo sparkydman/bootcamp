@@ -49,6 +49,9 @@ func ResponseErrorHandler(c *gin.Context) {
 		case CredentialsErrorCode.GetStatus():
 			c.JSON(http.StatusBadRequest, SetResponse(false, CredentialsErrorCode, NULL()))
 			c.Abort()
+		case ConflictErrorCode.GetStatus():
+			c.JSON(http.StatusConflict, SetResponse(false, ConflictErrorCode, NULL()))
+			c.Abort()
 		default:
 			c.JSON(http.StatusInternalServerError, SetResponse(false, ServerErrorCode, NULL()))
 			c.Abort()
