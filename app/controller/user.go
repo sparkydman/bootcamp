@@ -44,9 +44,9 @@ func (c userController) UpdateUser(g *gin.Context) {
 func (c userController) DeleteUser(g *gin.Context) {
 	c.svc.DeleteUser(g)
 }
-func (c userController) GetLoggedInUser(g *gin.Context){
+func (c userController) GetLoggedInUser(g *gin.Context) {
 	c.svc.GetLoggedInUser(g)
 }
-func (c userController) GetToken(g *gin.Context){
+func (c userController) GetToken(g *gin.Context) {
 	c.svc.GetToken(g)
 }

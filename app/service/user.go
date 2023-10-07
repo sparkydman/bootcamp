@@ -269,14 +269,14 @@ func (s userService) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
 }
 
-func (s userService) GetLoggedInUser(c *gin.Context){
+func (s userService) GetLoggedInUser(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	user := c.MustGet("LoggedInUser")
 
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, user))
 }
 
-func (s userService) GetToken(c *gin.Context){
+func (s userService) GetToken(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	code := utils.BadRequestErrorCode
 
@@ -319,5 +319,7 @@ func (s userService) GetToken(c *gin.Context){
 		utils.PanicException(code)
 	}
 
-	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, struct{AccessToken  string `json:"access_token,omitempty"`}{AccessToken: newToken}))
+	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, struct {
+		AccessToken string `json:"access_token,omitempty"`
+	}{AccessToken: newToken}))
 }

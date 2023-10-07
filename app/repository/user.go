@@ -4,7 +4,6 @@ import (
 	"bootcamp-api/app/model/dao"
 	"bootcamp-api/config"
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -33,7 +32,6 @@ func NewUserRepository(db config.Db) IUserRepository {
 func (r userRepository) CreateUser(ctx context.Context, data dao.User) error {
 	data.Base.ID = primitive.NewObjectID()
 	data.Base.CreatedAt = time.Now()
-	fmt.Println("create user data", data)
 	_, err := r.db.Client.Database(os.Getenv("DB_NAME")).Collection("Users").InsertOne(ctx, data)
 
 	return err
