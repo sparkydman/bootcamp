@@ -213,7 +213,7 @@ func (s UserService) UpdateUser(c *gin.Context) {
 
 	u := c.MustGet("LoggedInUser").(dao.User)
 	var id primitive.ObjectID
-	if user.Role == "admin" {
+	if u.Role == "admin" {
 		id, err = primitive.ObjectIDFromHex(c.Params.ByName("userid"))
 		if err != nil {
 			logger.Error("failed to validate request parameter", err)
@@ -229,7 +229,7 @@ func (s UserService) UpdateUser(c *gin.Context) {
 		utils.PanicException(errorCode)
 	}
 
-	if err := user.Vaildate(); err != nil {
+	if err := user.Vaildate(u.Role); err != nil {
 		logger.Error("failed to validate request body", err)
 		code.SetMessage(err.Error())
 		utils.PanicException(code)
@@ -242,7 +242,40 @@ func (s UserService) UpdateUser(c *gin.Context) {
 		logger.Error("failed to update user", err)
 		utils.PanicException(utils.ServerErrorCode)
 	}
-	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
+
+	if u.Role != "admin" {
+		u.Role = user.Role
+		u.UpdatedAt = time.Now()
+		u.Name = user.Name
+
+		accessTokenClaims := config.TokenClaims[dao.User]{
+			u,
+			jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				NotBefore: jwt.NewNumericDate(time.Now()),
+				Issuer:    os.Getenv("TOKEN_ISSUER"),
+				Subject:   os.Getenv("TOKEN_SUBJECT"),
+			},
+		}
+
+		accessToken, err := accessTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+		if err != nil {
+			logger.Error("failed to generate access token", err)
+			code := utils.ServerErrorCode
+			utils.PanicException(code)
+		}
+
+		c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, struct {
+			dao.User
+			AccessToken string `json:"access_token"`
+		}{
+			u,
+			accessToken,
+		}))
+	} else {
+		c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
+	}
 }
 
 func (s UserService) DeleteUser(c *gin.Context) {

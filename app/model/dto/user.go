@@ -32,8 +32,8 @@ type LoginUserResponse struct {
 func (c CreateUserRequest) Vaildate() error {
 	return validation.ValidateStruct(&c, validation.Field(&c.Name, validation.Required), validation.Field(&c.Email, validation.Required, is.Email), validation.Field(&c.Role, validation.Required, validation.In("user", "publisher", "admin")), validation.Field(&c.Password, validation.Required, validation.Length(8, 30)), validation.Field(&c.ConfirmPassword, validation.When(c.Email != c.ConfirmPassword, validation.Required.Error("Password don't match"))))
 }
-func (c UserRequest) Vaildate() error {
-	return validation.ValidateStruct(&c, validation.Field(&c.Name, validation.Required), validation.Field(&c.Role, validation.Required, validation.In("user", "publisher", "admin")))
+func (c UserRequest) Vaildate(role string) error {
+	return validation.ValidateStruct(&c, validation.Field(&c.Name, validation.Required), validation.Field(&c.Role, validation.Required, validation.In("user", "publisher", "admin"), validation.When(role != "admin" && c.Role == "admin", validation.Required.Error("only admin can upgrade user to admin"))))
 }
 func (l LoginUserRequest) Vaildate() error {
 	return validation.ValidateStruct(&l, validation.Field(&l.Email, validation.Required, is.Email), validation.Field(&l.Password, validation.Required, validation.Length(8, 30)))

@@ -14,6 +14,7 @@ func Init(app *dependencies.Initialize) *gin.Engine {
 
 	api := router.Group("/api")
 	{
+		//user routes
 		user := api.Group("/users")
 		user.POST("/create", app.UserCtrl.CreateUser)
 		user.POST("/login", app.UserCtrl.LoginUser)
@@ -23,6 +24,10 @@ func Init(app *dependencies.Initialize) *gin.Engine {
 		user.GET("/:id", app.UserCtrl.GetUserById)
 		user.PUT("/:userid", middleware.AuthenticateUser(), app.UserCtrl.UpdateUser)
 		user.DELETE("/:userid", middleware.AuthenticateUser(), app.UserCtrl.DeleteUser)
+
+		//bootcamp routes
+		bootcamp := api.Group("/bootcamps")
+		bootcamp.POST("/", middleware.AuthenticateUser(), middleware.AuthorizeUser("admin", "publisher"), app.BootcampCtrl.AddBootcamp)
 	}
 
 	return router

@@ -1,6 +1,10 @@
 package dto
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/gosimple/slug"
@@ -22,7 +26,7 @@ type BootcampRequest struct {
 }
 
 func (b BootcampRequest) Validate(validCareers []string) error {
-	return validation.ValidateStruct(&b, validation.Field(&b.Name, validation.Required), validation.Field(&b.Description, validation.Required), validation.Field(&b.Phone, validation.Required, validation.Max(20)), validation.Field(&b.Email, validation.Required, is.Email), validation.Field(&b.Address, validation.Required), validation.Field(&b.Careers, validation.Each(validation.In(validCareers))), validation.Field(&b.JobAssistance, validation.Required), validation.Field(&b.JobGuarantee, validation.Required), validation.Field(&b.AcceptPartPayment, validation.Required), validation.Field(&b.CreatedBy, validation.Required, validation.When(!primitive.IsValidObjectID(b.CreatedBy), validation.Required.Error("invalid created_by user id"))))
+	return validation.ValidateStruct(&b, validation.Field(&b.Name, validation.Required), validation.Field(&b.Description, validation.Required), validation.Field(&b.Phone, validation.Required, validation.Length(12, 20)), validation.Field(&b.Email, validation.Required, is.Email), validation.Field(&b.Address, validation.Required), validation.Field(&b.Careers, validation.Required, validation.Each(validation.By(customInRule(ValidCareers())))), validation.Field(&b.CreatedBy, validation.Required, validation.When(!primitive.IsValidObjectID(b.CreatedBy), validation.Required.Error("invalid created_by user id"))))
 }
 
 func (b *BootcampRequest) Slugify() {
@@ -42,5 +46,24 @@ func ValidCareers() []string {
 		"Graphic Design",
 		"Business",
 		"Others",
+	}
+}
+
+func customInRule(data []string) validation.RuleFunc {
+	mapdata := make(map[string]string, len(data))
+	for _, v := range data {
+		newValue := strings.ToLower(v)
+		mapdata[newValue] = v
+	}
+
+	return func(value interface{}) error {
+		s, ok := value.(string)
+		if !ok {
+			return errors.New("invalid string value")
+		}
+		if _, ok := mapdata[strings.ToLower(s)]; !ok {
+			return errors.New(fmt.Sprintf("%s: is not a valid option", s))
+		}
+		return nil
 	}
 }
