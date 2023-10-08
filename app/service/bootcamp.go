@@ -45,7 +45,7 @@ func (b Bootcamp) AddBootcamp(c *gin.Context) {
 	request.Slugify()
 
 	//check if bootcamp is already exist
-	_, err := b.repo.GetBootcampByFieldName(context.TODO(), primitive.D{{"slug", request.Slug}})
+	_, err := b.repo.GetBootcamp(context.TODO(), primitive.D{{"slug", request.Slug}})
 	if err == nil {
 		logger.Error("bootcamp already exists")
 		code = utils.ConflictErrorCode

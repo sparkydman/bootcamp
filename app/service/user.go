@@ -55,7 +55,7 @@ func (s UserService) CreateUser(c *gin.Context) {
 		utils.PanicException(code)
 	}
 
-	_, err := s.repo.GetUserByFieldName(context.TODO(), bson.D{{"email", request.Email}})
+	_, err := s.repo.GetUser(context.TODO(), bson.D{{"email", request.Email}})
 	if err == nil {
 		logger.Error("User already exists")
 		code = utils.ConflictErrorCode
@@ -89,7 +89,7 @@ func (s UserService) LoginUser(c *gin.Context) {
 		utils.PanicException(utils.CredentialsErrorCode)
 	}
 
-	user, err := s.repo.GetUserByFieldName(context.TODO(), bson.D{{"email", request.Email}})
+	user, err := s.repo.GetUser(context.TODO(), bson.D{{"email", request.Email}})
 	if err != nil {
 		logger.Error("failed to get user by email: %s, error: %v", request.Email, err)
 		utils.PanicException(utils.CredentialsErrorCode)
@@ -159,8 +159,8 @@ func (s UserService) GetUserById(c *gin.Context) {
 		utils.PanicException(code)
 	}
 
-	filter := bson.M{"_id": id}
-	user, err := s.repo.GetUserById(context.TODO(), filter)
+	filter := bson.D{{"_id", id}}
+	user, err := s.repo.GetUser(context.TODO(), filter)
 	if err != nil {
 		logger.Errorf("failed to get user by id: %v, error: %v", id, err)
 		utils.PanicException(utils.ServerErrorCode)
@@ -222,7 +222,7 @@ func (s UserService) UpdateUser(c *gin.Context) {
 		}
 	}
 	id = u.ID
-	if _, err := s.repo.GetUserById(context.TODO(), bson.M{"_id": id}); err != nil {
+	if _, err := s.repo.GetUser(context.TODO(), bson.D{{"_id", id}}); err != nil {
 		logger.Errorf("failed to get user by id: %v, error: %v", id, err)
 		errorCode := utils.NotFoundErrorCode
 		errorCode.SetMessage("user not found")
@@ -327,7 +327,7 @@ func (s UserService) GetToken(c *gin.Context) {
 		utils.PanicException(code)
 	}
 
-	user, err := s.repo.GetUserById(context.TODO(), primitive.M{"_id": decode})
+	user, err := s.repo.GetUser(context.TODO(), bson.D{{"_id", decode}})
 	if err != nil {
 		logger.Errorf("failed to retrieve user from db, error: %v", err)
 		code = utils.NotFoundErrorCode
