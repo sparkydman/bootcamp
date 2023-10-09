@@ -8,6 +8,7 @@ import (
 
 type IBootcampController interface {
 	AddBootcamp(c *gin.Context)
+	GetBootcampsByCreator(c *gin.Context)
 }
 
 type BootcampController struct {
@@ -19,4 +20,7 @@ func NewBootcampController(svc service.IBootcampService) *BootcampController {
 }
 func (b BootcampController) AddBootcamp(c *gin.Context) {
 	b.svc.AddBootcamp(c)
+}
+func (b BootcampController) GetBootcampsByCreator(c *gin.Context){
+	b.svc.GetBootcampsByCreator(c)
 }

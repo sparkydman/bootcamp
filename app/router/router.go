@@ -28,6 +28,7 @@ func Init(app *dependencies.Initialize) *gin.Engine {
 		//bootcamp routes
 		bootcamp := api.Group("/bootcamps")
 		bootcamp.POST("/", middleware.AuthenticateUser(), middleware.AuthorizeUser("admin", "publisher"), app.BootcampCtrl.AddBootcamp)
+		bootcamp.GET("/creator-bootcamps/:creator", app.BootcampCtrl.GetBootcampsByCreator)
 	}
 
 	return router
