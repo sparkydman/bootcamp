@@ -9,7 +9,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +29,7 @@ type IUserService interface {
 	DeleteUser(c *gin.Context)
 	GetLoggedInUser(c *gin.Context)
 	GetToken(c *gin.Context)
+	Logout(c *gin.Context)
 }
 
 type UserService struct {
@@ -101,18 +101,7 @@ func (s UserService) LoginUser(c *gin.Context) {
 
 	payload := user
 	payload.Password = ""
-	accessTokenClaims := config.TokenClaims[dao.User]{
-		payload,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    os.Getenv("TOKEN_ISSUER"),
-			Subject:   os.Getenv("TOKEN_SUBJECT"),
-		},
-	}
-
-	accessToken, err := accessTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+	accessToken, err := generateAccessToken(payload, time.Now().Add(30*time.Minute))
 	if err != nil {
 		logger.Error("failed to generate access token", err)
 		code := utils.UnAuthorizedErrorCode
@@ -120,19 +109,7 @@ func (s UserService) LoginUser(c *gin.Context) {
 		utils.PanicException(code)
 	}
 
-	age := time.Now().Add(30 * 24 * time.Hour)
-	refreshTokenClaims := config.TokenClaims[primitive.ObjectID]{
-		user.ID,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(age),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    os.Getenv("TOKEN_ISSUER"),
-			Subject:   os.Getenv("TOKEN_SUBJECT"),
-		},
-	}
-
-	refreshToken, err := refreshTokenClaims.GenerateToken([]byte(os.Getenv("REFRESH_TOKEN_KEY")))
+	refreshToken, err := generateRefreshToken(user.ID, time.Now().Add(30*24*time.Hour))
 	if err != nil {
 		logger.Error("failed to generate refresh token", err)
 		code := utils.UnAuthorizedErrorCode
@@ -172,24 +149,10 @@ func (s UserService) GetUserById(c *gin.Context) {
 
 func (s UserService) GetUsers(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
-	// fmt.Println("url from middleware", c.MustGet("RequestUrl").(string))
+
 	filter := bson.D{}
-	querySort := c.Query("sort")
-	querySelect := c.Query("select")
-	opts := []*options.FindOptions{
-		options.Find().SetProjection(bson.D{{"password", 0}}),
-	}
-	if querySort != "" {
-		opts = append(opts, options.Find().SetSort(bson.D{{querySort, 1}}))
-	}
-	if querySelect != "" {
-		fields := strings.Split(querySelect, ",")
-		var s bson.D
-		for _, field := range fields {
-			s = append(s, bson.E{Key: field, Value: 1})
-		}
-		opts = append(opts, options.Find().SetProjection(s))
-	}
+	opts := utils.FindOptions(c)
+	opts = append(opts, options.Find().SetProjection(bson.D{{"password", 0}}))
 
 	users, err := s.repo.GetUsers(context.TODO(), filter, opts...)
 	if err != nil {
@@ -248,18 +211,7 @@ func (s UserService) UpdateUser(c *gin.Context) {
 		u.UpdatedAt = time.Now()
 		u.Name = user.Name
 
-		accessTokenClaims := config.TokenClaims[dao.User]{
-			u,
-			jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-				IssuedAt:  jwt.NewNumericDate(time.Now()),
-				NotBefore: jwt.NewNumericDate(time.Now()),
-				Issuer:    os.Getenv("TOKEN_ISSUER"),
-				Subject:   os.Getenv("TOKEN_SUBJECT"),
-			},
-		}
-
-		accessToken, err := accessTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+		accessToken, err := generateAccessToken(u, time.Now().Add(30*time.Minute))
 		if err != nil {
 			logger.Error("failed to generate access token", err)
 			code := utils.ServerErrorCode
@@ -335,17 +287,8 @@ func (s UserService) GetToken(c *gin.Context) {
 		utils.PanicException(code)
 	}
 
-	newTokenClaims := config.TokenClaims[dao.User]{
-		user,
-		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    os.Getenv("TOKEN_ISSUER"),
-			Subject:   os.Getenv("TOKEN_SUBJECT"),
-		},
-	}
-	newToken, err := newTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+	user.Password = ""
+	newToken, err := generateAccessToken(user, time.Now().Add(30*time.Minute))
 	if err != nil {
 		logger.Errorf("failed to generate new access token, error: %v", err)
 		code = utils.ServerErrorCode
@@ -356,4 +299,51 @@ func (s UserService) GetToken(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, struct {
 		AccessToken string `json:"access_token,omitempty"`
 	}{AccessToken: newToken}))
+}
+
+func (s UserService) Logout(c *gin.Context) {
+	defer utils.ResponseErrorHandler(c)
+	errorCode := utils.ServerErrorCode
+
+	user := c.MustGet("LoggedInUser").(dao.User)
+	refreshToken, err := generateRefreshToken(user.ID, time.Now())
+	if err != nil {
+		utils.PanicException(errorCode)
+	}
+
+	c.SetCookie("refresh_token", refreshToken, 0, "/", "", false, false)
+	c.Set("LoggedInUser", nil)
+	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, struct {
+		Message string `json:"message"`
+	}{Message: "Logout successfully"}))
+}
+
+func generateAccessToken(payload dao.User, age time.Time) (string, error) {
+	accessTokenClaims := config.TokenClaims[dao.User]{
+		payload,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(age),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    os.Getenv("TOKEN_ISSUER"),
+			Subject:   os.Getenv("TOKEN_SUBJECT"),
+		},
+	}
+
+	return accessTokenClaims.GenerateToken([]byte(os.Getenv("ACCESS_TOKEN_KEY")))
+}
+
+func generateRefreshToken(id primitive.ObjectID, age time.Time) (string, error) {
+	refreshTokenClaims := config.TokenClaims[primitive.ObjectID]{
+		id,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(age),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    os.Getenv("TOKEN_ISSUER"),
+			Subject:   os.Getenv("TOKEN_SUBJECT"),
+		},
+	}
+
+	return refreshTokenClaims.GenerateToken([]byte(os.Getenv("REFRESH_TOKEN_KEY")))
 }

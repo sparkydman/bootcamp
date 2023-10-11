@@ -25,3 +25,4 @@ func VerifyToken[T any](tokenString string, key []byte, claimData T) (T, error) 
 
 	return TokenClaims[T]{}.Payload, err
 }
+

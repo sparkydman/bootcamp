@@ -74,7 +74,30 @@ func (b Bootcamp) AddBootcamp(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, utils.NULL()))
 }
 
-func (b Bootcamp) GetBootcampsByCreator(c *gin.Context){
+func (b Bootcamp) GetBootcampsByCreator(c *gin.Context) {
+	defer utils.ResponseErrorHandler(c)
+	errorCode := utils.BadRequestErrorCode
+
+	creator := c.Params.ByName("creator")
+	creatorId, err := primitive.ObjectIDFromHex(creator)
+	if err != nil {
+		logger.Error("failed to validate mongodb id", err)
+		errorCode.SetMessage(err.Error())
+		utils.PanicException(errorCode)
+	}
+
+	filter := bson.D{{"created_by", creatorId}}
+	bootcamps, err := b.repo.GetBootcamps(context.TODO(), filter)
+	if err != nil {
+		logger.Error("failed to get bootcamps from a creator", err)
+		errorCode = utils.ServerErrorCode
+		utils.PanicException(errorCode)
+	}
+
+	c.JSON(http.StatusOK, utils.SetResponse(true, utils.SuccessfulCode, bootcamps))
+}
+
+func (b Bootcamp) GetBootcamps(c *gin.Context) {
 	defer utils.ResponseErrorHandler(c)
 	errorCode := utils.BadRequestErrorCode
 

@@ -21,6 +21,7 @@ func Init(app *dependencies.Initialize) *gin.Engine {
 		user.GET("/", app.UserCtrl.GetUsers)
 		user.GET("/me", middleware.AuthenticateUser(), app.UserCtrl.GetLoggedInUser)
 		user.GET("/token", app.UserCtrl.GetToken)
+		user.GET("/logout", middleware.AuthenticateUser(), app.UserCtrl.Logout)
 		user.GET("/:id", app.UserCtrl.GetUserById)
 		user.PUT("/:userid", middleware.AuthenticateUser(), app.UserCtrl.UpdateUser)
 		user.DELETE("/:userid", middleware.AuthenticateUser(), app.UserCtrl.DeleteUser)

@@ -8,12 +8,22 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func AuthenticateUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		headers := c.Request.Header
 		authHeders := headers["Authorization"]
+
+		cookies, err := c.Cookie("refresh_token")
+		if err != nil {
+			utils.UnAuthorizedResponse(c)
+		}
+		if _, err := config.VerifyToken[primitive.ObjectID](cookies, []byte(os.Getenv("REFRESH_TOKEN_KEY")), primitive.ObjectID{}); err != nil {
+			utils.UnAuthorizedResponse(c)
+		}
+
 		if len(authHeders) != 0 {
 			token := authHeders[0]
 			if token != "" || strings.HasPrefix(token, "Bearer ") {

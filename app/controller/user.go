@@ -15,6 +15,7 @@ type IUserController interface {
 	DeleteUser(g *gin.Context)
 	GetLoggedInUser(c *gin.Context)
 	GetToken(c *gin.Context)
+	Logout(c *gin.Context)
 }
 
 type UserController struct {
@@ -49,4 +50,7 @@ func (c UserController) GetLoggedInUser(g *gin.Context) {
 }
 func (c UserController) GetToken(g *gin.Context) {
 	c.svc.GetToken(g)
+}
+func (c UserController) Logout(g *gin.Context) {
+	c.svc.Logout(g)
 }

@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func Get[T any](ctx context.Context, db *config.Db, dbname string, collection string, filter bson.D, opts ...*options.FindOneOptions)(T, error){
+func Get[T any](ctx context.Context, db *config.Db, dbname string, collection string, filter bson.D, opts ...*options.FindOneOptions) (T, error) {
 	var data T
 	if err := db.Client.Database(dbname).Collection(collection).FindOne(ctx, filter, opts...).Decode(&data); err != nil {
 		return data, err
@@ -37,7 +37,7 @@ func Insert[T any](ctx context.Context, data T, db *config.Db, dbname string, co
 
 func InsertMany[T any](ctx context.Context, data []T, db *config.Db, dbname string, collection string, opts ...*options.InsertManyOptions) error {
 	var payload []interface{}
-	for _, d := range data{
+	for _, d := range data {
 		payload = append(payload, d)
 	}
 	_, err := db.Client.Database(dbname).Collection(collection).InsertMany(ctx, payload, opts...)

@@ -21,6 +21,6 @@ func NewBootcampController(svc service.IBootcampService) *BootcampController {
 func (b BootcampController) AddBootcamp(c *gin.Context) {
 	b.svc.AddBootcamp(c)
 }
-func (b BootcampController) GetBootcampsByCreator(c *gin.Context){
+func (b BootcampController) GetBootcampsByCreator(c *gin.Context) {
 	b.svc.GetBootcampsByCreator(c)
 }
